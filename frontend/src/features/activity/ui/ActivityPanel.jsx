@@ -1,4 +1,15 @@
+import { Clock, ShoppingCart, TrendingUp, RefreshCw, Plus, Trash2 } from "lucide-react";
 import { useActivity } from "../hook/useActivity";
+
+function getActivityIcon(message) {
+  if (message.includes("Order") && message.includes("created"))  return <ShoppingCart size={14} color="var(--primary)" />;
+  if (message.includes("marked as"))                             return <TrendingUp    size={14} color="var(--success)" />;
+  if (message.includes("Stock updated"))                         return <TrendingUp    size={14} color="var(--success)" />;
+  if (message.includes("Restock Queue"))                         return <RefreshCw     size={14} color="var(--warning)" />;
+  if (message.includes("added"))                                 return <Plus          size={14} color="var(--primary)" />;
+  if (message.includes("deleted") || message.includes("removed")) return <Trash2      size={14} color="var(--danger)"  />;
+  return <Clock size={14} color="var(--gray-400)" />;
+}
 
 export default function ActivityPanel({ active }) {
   const items = useActivity(active);
@@ -7,7 +18,9 @@ export default function ActivityPanel({ active }) {
   return (
     <>
       <div className="section-header">
-        <h1 className="section-title">🕐 Activity Log</h1>
+        <h1 className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Clock size={20} /> Activity Log
+        </h1>
         <span style={{ fontSize: 12, color: "var(--gray-400)" }}>Latest {items.length} system actions</span>
       </div>
 
@@ -31,14 +44,10 @@ export default function ActivityPanel({ active }) {
                     </span>
                   </td>
                   <td>
-                    <span style={{ fontSize: 13 }}>
-                      {item.message.includes("Order") && "🛒 "}
-                      {item.message.includes("Stock updated") && "📈 "}
-                      {item.message.includes("Restock Queue") && "🔄 "}
-                      {item.message.includes("created") && !item.message.includes("Order") && "➕ "}
-                      {item.message.includes("deleted") && "🗑 "}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                      {getActivityIcon(item.message)}
                       {item.message}
-                    </span>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -46,7 +55,7 @@ export default function ActivityPanel({ active }) {
                 <tr>
                   <td colSpan={2}>
                     <div className="empty-state">
-                      <div className="empty-icon">🕐</div>
+                      <Clock size={32} strokeWidth={1.2} color="var(--gray-300)" />
                       <p>No activity recorded yet</p>
                     </div>
                   </td>

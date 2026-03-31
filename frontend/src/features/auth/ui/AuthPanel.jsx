@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Store, Shield, User, AlertTriangle, Clock, ArrowLeft } from "lucide-react";
 import { useAuth } from "../hook/useAuth";
 
 const DEMO_ADMIN   = { email: "demo@inventory.com",  password: "password123" };
@@ -29,14 +30,20 @@ export default function AuthPanel() {
     return (
       <div className="auth-wrap">
         <div className="auth-card" style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 52, marginBottom: 12 }}>⏳</div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+            <Clock size={52} strokeWidth={1.5} color="var(--warning)" />
+          </div>
           <h2 style={{ marginBottom: 8 }}>Registration Submitted!</h2>
           <p style={{ color: "var(--gray-500)", marginBottom: 20, lineHeight: 1.6 }}>
             Your manager account is <strong>pending admin approval</strong>.<br />
             You will receive an email once approved.
           </p>
-          <button className="btn btn-secondary" onClick={() => { setPending(false); setMode("login"); }}>
-            ← Back to Login
+          <button
+            className="btn btn-secondary"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+            onClick={() => { setPending(false); setMode("login"); }}
+          >
+            <ArrowLeft size={14} /> Back to Login
           </button>
         </div>
       </div>
@@ -47,7 +54,7 @@ export default function AuthPanel() {
     <div className="auth-wrap">
       <div className="auth-card">
         <div className="auth-logo">
-          <div style={{ fontSize: 40 }}>🏪</div>
+          <Store size={40} strokeWidth={1.5} />
           <h1>Smart Inventory OS</h1>
           <p>Manage products, orders &amp; stock levels</p>
         </div>
@@ -62,8 +69,9 @@ export default function AuthPanel() {
         </div>
 
         {mode === "signup" && (
-          <div style={{ background: "var(--warning-light)", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 12, color: "#92400e" }}>
-            ⚠ Manager accounts require <strong>admin approval</strong> before you can log in.
+          <div style={{ background: "var(--warning-light)", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 12, color: "#92400e", display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <AlertTriangle size={14} style={{ marginTop: 1, flexShrink: 0 }} />
+            <span>Manager accounts require <strong>admin approval</strong> before you can log in.</span>
           </div>
         )}
 
@@ -78,7 +86,6 @@ export default function AuthPanel() {
             <input type="password" placeholder="Min. 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
 
-          {/* Manager-only extra fields on signup */}
           {mode === "signup" && (
             <>
               <div className="auth-field">
@@ -103,11 +110,15 @@ export default function AuthPanel() {
             </>
           )}
 
-          {error && <div className="alert alert-error">⚠️ {error}</div>}
+          {error && (
+            <div className="alert alert-error" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <AlertTriangle size={14} /> {error}
+            </div>
+          )}
 
           <div className="auth-actions">
             <button type="submit" className="btn btn-primary" style={{ width: "100%", height: 40 }} disabled={loading}>
-              {loading ? "Please wait…" : mode === "login" ? "Login →" : "Submit Registration →"}
+              {loading ? "Please wait…" : mode === "login" ? "Login" : "Submit Registration"}
             </button>
 
             {mode === "login" && (
@@ -115,20 +126,20 @@ export default function AuthPanel() {
                 <button
                   type="button"
                   className="btn auth-demo-btn"
-                  style={{ width: "100%", height: 40 }}
+                  style={{ width: "100%", height: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
                   onClick={() => { setEmail(DEMO_ADMIN.email); setPassword(DEMO_ADMIN.password); login(DEMO_ADMIN.email, DEMO_ADMIN.password); }}
                   disabled={loading}
                 >
-                  🔑 Demo Login (Admin)
+                  <Shield size={15} /> Demo Login (Admin)
                 </button>
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  style={{ width: "100%", height: 38 }}
+                  style={{ width: "100%", height: 38, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
                   onClick={() => { setEmail(DEMO_MANAGER.email); setPassword(DEMO_MANAGER.password); login(DEMO_MANAGER.email, DEMO_MANAGER.password); }}
                   disabled={loading}
                 >
-                  👤 Demo Login (Manager)
+                  <User size={15} /> Demo Login (Manager)
                 </button>
               </>
             )}

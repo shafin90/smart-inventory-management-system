@@ -1,4 +1,8 @@
 import { observer } from "mobx-react-lite";
+import {
+  LayoutDashboard, Package, ShoppingCart, RefreshCw,
+  Clock, Shield, LogOut, Store,
+} from "lucide-react";
 import rootStore from "./stores/rootStore";
 import AuthPanel from "./features/auth/ui/AuthPanel";
 import DashboardPanel from "./features/dashboard/ui/DashboardPanel";
@@ -10,14 +14,14 @@ import AdminPanel from "./features/admin/ui/AdminPanel";
 import "./index.css";
 
 const BASE_NAV = [
-  { key: "dashboard", icon: "📊", label: "Dashboard" },
-  { key: "products",  icon: "📦", label: "Products"  },
-  { key: "orders",    icon: "🛒", label: "Orders"    },
-  { key: "restock",   icon: "🔄", label: "Restock Queue" },
-  { key: "activity",  icon: "🕐", label: "Activity Log"  },
+  { key: "dashboard", icon: <LayoutDashboard size={16} />, label: "Dashboard" },
+  { key: "products",  icon: <Package        size={16} />, label: "Products"  },
+  { key: "orders",    icon: <ShoppingCart   size={16} />, label: "Orders"    },
+  { key: "restock",   icon: <RefreshCw      size={16} />, label: "Restock Queue" },
+  { key: "activity",  icon: <Clock          size={16} />, label: "Activity Log"  },
 ];
 
-const ADMIN_NAV = { key: "admin", icon: "🔑", label: "User Management" };
+const ADMIN_NAV = { key: "admin", icon: <Shield size={16} />, label: "User Management" };
 
 function App() {
   if (!rootStore.token) return <AuthPanel />;
@@ -35,7 +39,7 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="sidebar-logo">
-          🏪 <span>Inventory OS</span>
+          <Store size={20} /> <span>Inventory OS</span>
         </div>
         <nav className="sidebar-nav">
           {nav.map(({ key, icon, label }) => (
@@ -58,8 +62,8 @@ function App() {
               <span className={`role-badge ${role}`}>{role}</span>
             </div>
           </div>
-          <button className="btn btn-secondary" style={{ width: "100%" }} onClick={() => rootStore.logout()}>
-            🚪 Logout
+          <button className="btn btn-secondary" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => rootStore.logout()}>
+            <LogOut size={14} /> Logout
           </button>
         </div>
       </aside>

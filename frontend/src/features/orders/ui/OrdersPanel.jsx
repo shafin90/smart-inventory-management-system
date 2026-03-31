@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { observer } from "mobx-react-lite";
+import {
+  ShoppingCart, Plus, X, ChevronLeft, ChevronRight,
+  CheckCircle, Truck, PackageCheck, Ban, Info,
+} from "lucide-react";
 import { useOrders } from "../hook/useOrders";
 import rootStore from "../../../stores/rootStore";
 
 const ORDER_STATUSES = ["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"];
 
-// Valid next status for managers (strict sequential flow)
 const MANAGER_NEXT = {
   Pending:   "Confirmed",
   Confirmed: "Shipped",
@@ -20,10 +23,11 @@ const statusBadge = (s) => {
 function OrdersPanel({ active }) {
   const { orders, products, total, page, totalPages, changePage, error, filters, applyFilters, createOrder, updateStatus } = useOrders(active);
   const isAdmin = rootStore.isAdmin;
-  const [showForm, setShowForm]     = useState(false);
+
+  const [showForm, setShowForm]         = useState(false);
   const [customerName, setCustomerName] = useState("");
-  const [items, setItems]           = useState([{ productId: 0, quantity: 1 }]);
-  const [localError, setLocalError] = useState("");
+  const [items, setItems]               = useState([{ productId: 0, quantity: 1 }]);
+  const [localError, setLocalError]     = useState("");
 
   if (!active) return null;
 
@@ -39,41 +43,39 @@ function OrdersPanel({ active }) {
     const ids = selected.map((i) => i.productId);
     if (new Set(ids).size !== ids.length) { setLocalError("This product is already added to the order."); return; }
     await createOrder({ customerName, items: selected });
-    setCustomerName("");
-    setItems([{ productId: 0, quantity: 1 }]);
-    setShowForm(false);
+    setCustomerName(""); setItems([{ productId: 0, quantity: 1 }]); setShowForm(false);
   };
 
-  /** Build the action buttons for a row according to the user's role */
   const renderActions = (o) => {
     if (["Delivered", "Cancelled"].includes(o.status)) return null;
 
     if (isAdmin) {
       return (
         <>
-          {o.status === "Pending"   && <button className="btn btn-primary btn-sm"  onClick={() => updateStatus(o.id, "Confirmed")}>Confirm</button>}
-          {o.status === "Confirmed" && <button className="btn btn-warning btn-sm"  onClick={() => updateStatus(o.id, "Shipped")}>Ship</button>}
-          {o.status === "Shipped"   && <button className="btn btn-success btn-sm"  onClick={() => updateStatus(o.id, "Delivered")}>Deliver</button>}
-          <button className="btn btn-danger btn-sm" onClick={() => updateStatus(o.id, "Cancelled")}>Cancel</button>
+          {o.status === "Pending"   && <button className="btn btn-primary btn-sm" style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={() => updateStatus(o.id, "Confirmed")}><CheckCircle size={12} /> Confirm</button>}
+          {o.status === "Confirmed" && <button className="btn btn-warning btn-sm" style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={() => updateStatus(o.id, "Shipped")}><Truck size={12} /> Ship</button>}
+          {o.status === "Shipped"   && <button className="btn btn-success btn-sm" style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={() => updateStatus(o.id, "Delivered")}><PackageCheck size={12} /> Deliver</button>}
+          <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={() => updateStatus(o.id, "Cancelled")}><Ban size={12} /> Cancel</button>
         </>
       );
     }
 
-    // Manager: strict sequential flow, cancel only before Shipped
     const nextStatus = MANAGER_NEXT[o.status];
+    const nextIcon   = nextStatus === "Confirmed" ? <CheckCircle size={12} /> : nextStatus === "Shipped" ? <Truck size={12} /> : <PackageCheck size={12} />;
     return (
       <>
         {nextStatus && (
           <button
             className={`btn btn-sm ${nextStatus === "Confirmed" ? "btn-primary" : nextStatus === "Shipped" ? "btn-warning" : "btn-success"}`}
+            style={{ display: "flex", alignItems: "center", gap: 4 }}
             onClick={() => updateStatus(o.id, nextStatus)}
           >
-            → {nextStatus}
+            {nextIcon} {nextStatus}
           </button>
         )}
         {!["Shipped", "Delivered"].includes(o.status) && (
-          <button className="btn btn-danger btn-sm" onClick={() => updateStatus(o.id, "Cancelled")}>
-            Cancel
+          <button className="btn btn-danger btn-sm" style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={() => updateStatus(o.id, "Cancelled")}>
+            <Ban size={12} /> Cancel
           </button>
         )}
       </>
@@ -83,9 +85,11 @@ function OrdersPanel({ active }) {
   return (
     <>
       <div className="section-header">
-        <h1 className="section-title">🛒 Orders</h1>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? "✕ Cancel" : "+ Create Order"}
+        <h1 className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <ShoppingCart size={20} /> Orders
+        </h1>
+        <button className="btn btn-primary btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => setShowForm((v) => !v)}>
+          {showForm ? <><X size={13} /> Cancel</> : <><Plus size={13} /> Create Order</>}
         </button>
       </div>
 
@@ -105,7 +109,9 @@ function OrdersPanel({ active }) {
           </div>
           {(filters.status || filters.date) && (
             <div className="form-group" style={{ justifyContent: "flex-end" }}>
-              <button className="btn btn-ghost btn-sm" onClick={() => applyFilters({ status: "", date: "" })}>✕ Clear Filters</button>
+              <button className="btn btn-ghost btn-sm" style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={() => applyFilters({ status: "", date: "" })}>
+                <X size={12} /> Clear Filters
+              </button>
             </div>
           )}
           <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--gray-400)", alignSelf: "flex-end", paddingBottom: 4 }}>
@@ -117,14 +123,15 @@ function OrdersPanel({ active }) {
       {/* Create Order Form */}
       {showForm && (
         <div className="card">
-          <div className="card-title">🛒 New Order</div>
+          <div className="card-title" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <ShoppingCart size={15} /> New Order
+          </div>
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Customer Name *</label>
               <input style={{ width: 220 }} placeholder="e.g. John Smith" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
             </div>
           </div>
-
           <div style={{ marginBottom: 12 }}>
             <label className="form-label" style={{ display: "block", marginBottom: 8 }}>Products *</label>
             {items.map((item, index) => (
@@ -140,23 +147,29 @@ function OrdersPanel({ active }) {
                 <div className="form-group">
                   <input type="number" min="1" style={{ width: 80 }} value={item.quantity} onChange={(e) => updateItem(index, "quantity", Number(e.target.value))} />
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={() => removeLine(index)} disabled={items.length === 1}>✕</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => removeLine(index)} disabled={items.length === 1}>
+                  <X size={13} />
+                </button>
               </div>
             ))}
-            <button className="btn btn-secondary btn-sm" onClick={addLine}>+ Add another product</button>
+            <button className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: 5 }} onClick={addLine}>
+              <Plus size={13} /> Add another product
+            </button>
           </div>
-
-          {(localError || error) && <div className="alert alert-error">⚠️ {localError || error}</div>}
+          {(localError || error) && (
+            <div className="alert alert-error" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <X size={14} /> {localError || error}
+            </div>
+          )}
           <div className="form-row" style={{ marginBottom: 0 }}>
             <button className="btn btn-primary" onClick={submitOrder}>Place Order</button>
           </div>
         </div>
       )}
 
-      {/* Role permission info for managers */}
       {!isAdmin && (
-        <div style={{ fontSize: 11, color: "var(--gray-400)", padding: "4px 0 8px" }}>
-          ℹ Managers follow the order flow: Pending → Confirmed → Shipped → Delivered. Cancellation is only allowed before shipping.
+        <div style={{ fontSize: 11, color: "var(--gray-400)", padding: "4px 0 8px", display: "flex", alignItems: "center", gap: 5 }}>
+          <Info size={11} /> Managers follow the order flow: Pending → Confirmed → Shipped → Delivered. Cancellation is only allowed before shipping.
         </div>
       )}
 
@@ -190,16 +203,27 @@ function OrdersPanel({ active }) {
                 </tr>
               ))}
               {orders.length === 0 && (
-                <tr><td colSpan={6}><div className="empty-state"><div className="empty-icon">🛒</div><p>No orders found</p></div></td></tr>
+                <tr>
+                  <td colSpan={6}>
+                    <div className="empty-state">
+                      <ShoppingCart size={32} strokeWidth={1.2} color="var(--gray-300)" />
+                      <p>No orders found</p>
+                    </div>
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
         {totalPages > 1 && (
           <div className="pagination" style={{ padding: "12px 16px" }}>
-            <button className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => changePage(page - 1)}>← Prev</button>
+            <button className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: 4 }} disabled={page <= 1} onClick={() => changePage(page - 1)}>
+              <ChevronLeft size={14} /> Prev
+            </button>
             <span className="page-info">Page {page} of {totalPages}</span>
-            <button className="btn btn-secondary btn-sm" disabled={page >= totalPages} onClick={() => changePage(page + 1)}>Next →</button>
+            <button className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: 4 }} disabled={page >= totalPages} onClick={() => changePage(page + 1)}>
+              Next <ChevronRight size={14} />
+            </button>
           </div>
         )}
       </div>

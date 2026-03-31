@@ -1,7 +1,11 @@
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Cell, Legend,
+  CartesianGrid, Cell,
 } from "recharts";
+import {
+  LayoutDashboard, Clock, TrendingUp, Package,
+  ShoppingCart, AlertTriangle,
+} from "lucide-react";
 import { useDashboard } from "../hook/useDashboard";
 import rootStore from "../../../stores/rootStore";
 
@@ -14,13 +18,15 @@ const STATUS_COLORS = {
 };
 
 export default function DashboardPanel({ active }) {
-  const data = useDashboard(active);
+  const data    = useDashboard(active);
   const isAdmin = rootStore.isAdmin;
 
   if (!active) return null;
   if (!data) return (
     <div className="section-header">
-      <h1 className="section-title">Dashboard</h1>
+      <h1 className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <LayoutDashboard size={20} /> Dashboard
+      </h1>
       <div className="card" style={{ padding: "40px", textAlign: "center", color: "var(--gray-400)" }}>Loading dashboard…</div>
     </div>
   );
@@ -36,14 +42,15 @@ export default function DashboardPanel({ active }) {
   return (
     <>
       <div className="section-header">
-        <h1 className="section-title">📊 Dashboard</h1>
+        <h1 className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <LayoutDashboard size={20} /> Dashboard
+        </h1>
         <span style={{ fontSize: 12, color: "var(--gray-400)" }}>Live data — refreshed on load</span>
       </div>
 
       {/* Admin: pending managers alert */}
       {isAdmin && data.pending_managers > 0 && (
         <div
-          className="alert"
           style={{
             background: "var(--warning-light, #fef3c7)",
             border: "1px solid var(--warning, #f59e0b)",
@@ -55,18 +62,15 @@ export default function DashboardPanel({ active }) {
             marginBottom: 14,
           }}
         >
-          <span style={{ fontSize: 20 }}>⏳</span>
+          <Clock size={20} color="var(--warning)" />
           <div style={{ flex: 1 }}>
             <strong>{data.pending_managers} manager account{data.pending_managers > 1 ? "s" : ""} pending approval</strong>
             <span style={{ fontSize: 12, color: "var(--gray-500)", marginLeft: 8 }}>
               Go to User Management to review
             </span>
           </div>
-          <button
-            className="btn btn-sm btn-primary"
-            onClick={() => rootStore.setTab("admin")}
-          >
-            Review →
+          <button className="btn btn-sm btn-primary" onClick={() => rootStore.setTab("admin")}>
+            Review
           </button>
         </div>
       )}
@@ -95,9 +99,10 @@ export default function DashboardPanel({ active }) {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        {/* All-status chart */}
         <div className="card">
-          <div className="card-title">📈 Orders by Status</div>
+          <div className="card-title" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <TrendingUp size={15} /> Orders by Status
+          </div>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--gray-200)" />
@@ -111,7 +116,6 @@ export default function DashboardPanel({ active }) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-          {/* Mini legend */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--gray-100)" }}>
             {chartData.map(({ name, value, color }) => (
               <div key={name} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11 }}>
@@ -124,7 +128,9 @@ export default function DashboardPanel({ active }) {
         </div>
 
         <div className="card">
-          <div className="card-title">📦 Product Stock Summary</div>
+          <div className="card-title" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Package size={15} /> Product Stock Summary
+          </div>
           <div className="table-wrap" style={{ marginTop: 0 }}>
             <table>
               <thead>
