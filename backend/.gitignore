@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Environment variables — never commit secrets
+.env
+.env.docker
+.env.*.local
+
+# Test coverage
+coverage/
+
+# Seed file (contains hashed credentials)
+sql/seed.sql
+
+# Logs
+*.log
+logs/

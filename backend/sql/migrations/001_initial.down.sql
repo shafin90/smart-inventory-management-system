@@ -1,0 +1,14 @@
+-- Migration 001 DOWN: Drop all tables and types
+
+DROP TABLE IF EXISTS activity_logs CASCADE;
+DROP TABLE IF EXISTS restock_queue CASCADE;
+DROP TABLE IF EXISTS order_items CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS products CASCADE;
+DROP TABLE IF EXISTS categories CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+DROP TYPE IF EXISTS restock_priority;
+DROP TYPE IF EXISTS order_status;
+DROP TYPE IF EXISTS product_status;
+DROP TYPE IF EXISTS user_role;
