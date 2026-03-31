@@ -1,7 +1,7 @@
 const app = require("./app");
 const { port } = require("./config/env");
 const redis = require("./db/redis");
-const { connectQueue } = require("./queue/rabbitmq");
+const { connectQueue, mqEvents } = require("./queue/rabbitmq");
 const { startConsumer } = require("./queue/consumer");
 
 async function retry(fn, label, retries = 15, delayMs = 2000) {
@@ -25,6 +25,22 @@ async function start() {
     await retry(() => connectQueue(), "RabbitMQ");
     await startConsumer();
 
+    // Auto-reconnect RabbitMQ if the connection drops after startup
+    let mqReconnecting = false;
+    mqEvents.on("disconnected", async () => {
+      if (mqReconnecting) return;
+      mqReconnecting = true;
+      try {
+        await retry(() => connectQueue(), "RabbitMQ reconnect", 10, 3000);
+        await startConsumer();
+        console.log("[MQ] Reconnected and consumer restarted.");
+      } catch (err) {
+        console.error("[MQ] Reconnect failed permanently:", err.message);
+      } finally {
+        mqReconnecting = false;
+      }
+    });
+
     const server = app.listen(port, () =>
       console.log(`Backend running on http://localhost:${port}`)
     );
@@ -33,19 +49,14 @@ async function start() {
     function shutdown(signal) {
       console.log(`\nReceived ${signal}. Shutting down gracefully…`);
       server.close(async () => {
-        try {
-          await redis.quit();
-          console.log("Redis disconnected.");
-        } catch (_) {}
+        try { await redis.quit(); } catch (_) {}
         console.log("HTTP server closed.");
         process.exit(0);
       });
-
-      // Force-exit if graceful shutdown takes too long
       setTimeout(() => {
-        console.error("Forced exit after timeout.");
+        console.error("Forced exit after shutdown timeout.");
         process.exit(1);
-      }, 10000);
+      }, 10_000);
     }
 
     process.on("SIGTERM", () => shutdown("SIGTERM"));
@@ -56,7 +67,6 @@ async function start() {
   }
 }
 
-// Catch unhandled promise rejections to prevent silent crashes
 process.on("unhandledRejection", (reason) => {
   console.error("Unhandled Rejection:", reason);
 });

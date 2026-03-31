@@ -10,12 +10,14 @@ const statusBadge = (status) =>
 
 function ProductsPanel({ active }) {
   const { products, categories, total, page, totalPages, applySearch, changePage, create, createCategory, restock, remove, error } = useProducts(active);
-  const [search, setSearch] = useState("");
+  const isAdmin   = rootStore.isAdmin;
+  const [search, setSearch]       = useState("");
   const [categoryName, setCategoryName] = useState("");
   const [restockId, setRestockId] = useState(null);
   const [restockQty, setRestockQty] = useState(10);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm]   = useState(false);
   const [form, setForm] = useState({ name: "", categoryId: 0, price: "", stockQuantity: "", minStockThreshold: 5 });
+
   if (!active) return null;
 
   const handleSearch = (e) => {
@@ -35,27 +37,45 @@ function ProductsPanel({ active }) {
       <div className="section-header">
         <h1 className="section-title">📦 Products</h1>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn btn-secondary btn-sm" onClick={() => setShowForm((v) => !v)}>
-            {showForm ? "✕ Cancel" : "+ Add Product"}
-          </button>
+          {isAdmin && (
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowForm((v) => !v)}>
+              {showForm ? "✕ Cancel" : "+ Add Product"}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Add Category */}
-      <div className="card" style={{ padding: "14px 20px" }}>
-        <div className="card-title" style={{ marginBottom: 10, fontSize: 13 }}>🗂 Categories</div>
-        <div className="form-row" style={{ marginBottom: 0 }}>
-          <input style={{ maxWidth: 220 }} placeholder="New category name (e.g. Electronics)" value={categoryName} onChange={(e) => setCategoryName(e.target.value)} />
-          <button className="btn btn-secondary btn-sm" onClick={async () => { if (!categoryName.trim()) return; await createCategory(categoryName.trim()); setCategoryName(""); }}>Add Category</button>
-          {categories.map((c) => (
-            <span key={c.id} className="badge badge-blue" style={{ fontSize: 12, padding: "4px 10px" }}>{c.name}</span>
-          ))}
+      {/* Categories — admin only */}
+      {isAdmin && (
+        <div className="card" style={{ padding: "14px 20px" }}>
+          <div className="card-title" style={{ marginBottom: 10, fontSize: 13 }}>🗂 Categories</div>
+          <div className="form-row" style={{ marginBottom: 0 }}>
+            <input
+              style={{ maxWidth: 220 }}
+              placeholder="New category name (e.g. Electronics)"
+              value={categoryName}
+              onChange={(e) => setCategoryName(e.target.value)}
+            />
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={async () => { if (!categoryName.trim()) return; await createCategory(categoryName.trim()); setCategoryName(""); }}
+            >
+              Add Category
+            </button>
+            {categories.map((c) => (
+              <span key={c.id} className="badge badge-blue" style={{ fontSize: 12, padding: "4px 10px" }}>{c.name}</span>
+            ))}
+          </div>
+          {categories.length === 0 && (
+            <p style={{ marginTop: 8, color: "var(--warning)", fontSize: 12 }}>
+              ⚠ No categories yet. Add one before creating products.
+            </p>
+          )}
         </div>
-        {categories.length === 0 && <p style={{ marginTop: 8, color: "var(--warning)", fontSize: 12 }}>⚠ No categories yet. Add one before creating products.</p>}
-      </div>
+      )}
 
-      {/* Add Product Form */}
-      {showForm && (
+      {/* Add Product Form — admin only */}
+      {isAdmin && showForm && (
         <div className="card">
           <div className="card-title">➕ New Product</div>
           <div className="form-row">
@@ -83,7 +103,9 @@ function ProductsPanel({ active }) {
               <input style={{ width: 90 }} type="number" min="0" placeholder="5" value={form.minStockThreshold} onChange={(e) => setForm({ ...form, minStockThreshold: e.target.value })} />
             </div>
             <div className="form-group" style={{ justifyContent: "flex-end" }}>
-              <button className="btn btn-primary" onClick={handleCreate} disabled={categories.length === 0 || form.categoryId === 0}>Save Product</button>
+              <button className="btn btn-primary" onClick={handleCreate} disabled={categories.length === 0 || form.categoryId === 0}>
+                Save Product
+              </button>
             </div>
           </div>
           {error && <div className="alert alert-error">⚠️ {error}</div>}
@@ -139,7 +161,7 @@ function ProductsPanel({ active }) {
                       ) : (
                         <button className="btn btn-secondary btn-sm" onClick={() => { setRestockId(p.id); setRestockQty(10); }}>+Restock</button>
                       )}
-                      {rootStore.isAdmin && (
+                      {isAdmin && (
                         <button className="btn btn-danger btn-sm" onClick={() => remove(p.id)}>Delete</button>
                       )}
                     </div>

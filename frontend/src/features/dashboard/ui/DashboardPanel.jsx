@@ -1,8 +1,22 @@
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  CartesianGrid, Cell, Legend,
+} from "recharts";
 import { useDashboard } from "../hook/useDashboard";
+import rootStore from "../../../stores/rootStore";
+
+const STATUS_COLORS = {
+  Pending:   "#f59e0b",
+  Confirmed: "#3b82f6",
+  Shipped:   "#8b5cf6",
+  Delivered: "#10b981",
+  Cancelled: "#ef4444",
+};
 
 export default function DashboardPanel({ active }) {
   const data = useDashboard(active);
+  const isAdmin = rootStore.isAdmin;
+
   if (!active) return null;
   if (!data) return (
     <div className="section-header">
@@ -12,8 +26,11 @@ export default function DashboardPanel({ active }) {
   );
 
   const chartData = [
-    { name: "Pending",   value: Number(data.pending_orders   || 0) },
-    { name: "Completed", value: Number(data.completed_orders || 0) },
+    { name: "Pending",   value: Number(data.pending_count   || 0), color: STATUS_COLORS.Pending   },
+    { name: "Confirmed", value: Number(data.confirmed_count || 0), color: STATUS_COLORS.Confirmed },
+    { name: "Shipped",   value: Number(data.shipped_count   || 0), color: STATUS_COLORS.Shipped   },
+    { name: "Delivered", value: Number(data.delivered_count || 0), color: STATUS_COLORS.Delivered },
+    { name: "Cancelled", value: Number(data.cancelled_count || 0), color: STATUS_COLORS.Cancelled },
   ];
 
   return (
@@ -22,6 +39,37 @@ export default function DashboardPanel({ active }) {
         <h1 className="section-title">📊 Dashboard</h1>
         <span style={{ fontSize: 12, color: "var(--gray-400)" }}>Live data — refreshed on load</span>
       </div>
+
+      {/* Admin: pending managers alert */}
+      {isAdmin && data.pending_managers > 0 && (
+        <div
+          className="alert"
+          style={{
+            background: "var(--warning-light, #fef3c7)",
+            border: "1px solid var(--warning, #f59e0b)",
+            borderRadius: 10,
+            padding: "12px 18px",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 14,
+          }}
+        >
+          <span style={{ fontSize: 20 }}>⏳</span>
+          <div style={{ flex: 1 }}>
+            <strong>{data.pending_managers} manager account{data.pending_managers > 1 ? "s" : ""} pending approval</strong>
+            <span style={{ fontSize: 12, color: "var(--gray-500)", marginLeft: 8 }}>
+              Go to User Management to review
+            </span>
+          </div>
+          <button
+            className="btn btn-sm btn-primary"
+            onClick={() => rootStore.setTab("admin")}
+          >
+            Review →
+          </button>
+        </div>
+      )}
 
       <div className="stats-grid">
         <div className="stat-card">
@@ -33,11 +81,11 @@ export default function DashboardPanel({ active }) {
           <div className="stat-value green">${Number(data.revenue_today).toFixed(2)}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Pending Orders</div>
+          <div className="stat-label">In Progress</div>
           <div className="stat-value amber">{data.pending_orders}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Completed Orders</div>
+          <div className="stat-label">Delivered</div>
           <div className="stat-value green">{data.completed_orders}</div>
         </div>
         <div className="stat-card">
@@ -47,17 +95,32 @@ export default function DashboardPanel({ active }) {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        {/* All-status chart */}
         <div className="card">
-          <div className="card-title">📈 Pending vs Completed</div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={chartData}>
+          <div className="card-title">📈 Orders by Status</div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--gray-200)" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Bar dataKey="value" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip formatter={(v) => [v, "Orders"]} />
+              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                {chartData.map((entry) => (
+                  <Cell key={entry.name} fill={entry.color} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
+          {/* Mini legend */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--gray-100)" }}>
+            {chartData.map(({ name, value, color }) => (
+              <div key={name} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: color, display: "inline-block" }} />
+                <span style={{ color: "var(--gray-500)" }}>{name}</span>
+                <strong>{value}</strong>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="card">
@@ -84,7 +147,11 @@ export default function DashboardPanel({ active }) {
                   </tr>
                 ))}
                 {!(data.product_summary || []).length && (
-                  <tr><td colSpan={3} style={{ textAlign: "center", color: "var(--gray-400)", padding: "24px" }}>No products yet</td></tr>
+                  <tr>
+                    <td colSpan={3} style={{ textAlign: "center", color: "var(--gray-400)", padding: "24px" }}>
+                      No products yet
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

@@ -13,8 +13,14 @@ async function createOrder({ customerName, items, userId }) {
   const client = await db.getClient();
   try {
     await client.query("BEGIN");
+
+    // FOR UPDATE: row-level locks prevent concurrent orders from overselling
+    // the same product. Without this, two simultaneous requests can both read
+    // stock=10 and both pass validation, resulting in stock going negative.
     const productData = await client.query(
-      "SELECT id, name, price, status, stock_quantity, min_stock_threshold FROM products WHERE id = ANY($1)",
+      `SELECT id, name, price, status, stock_quantity, min_stock_threshold
+       FROM products WHERE id = ANY($1)
+       FOR UPDATE`,
       [ids]
     );
     const productMap = new Map(productData.rows.map((row) => [row.id, row]));
@@ -48,13 +54,15 @@ async function createOrder({ customerName, items, userId }) {
          SET stock_quantity = stock_quantity - $1,
              status = CASE WHEN stock_quantity - $1 <= 0
                           THEN 'Out of Stock'::product_status
-                          ELSE 'Active'::product_status END
+                          ELSE 'Active'::product_status END,
+             updated_at = NOW()
          WHERE id = $2
          RETURNING id, stock_quantity, min_stock_threshold`,
         [item.quantity, item.productId]
       );
       const p = updated.rows[0];
-      await productService.updateRestockQueue(p.id, p.stock_quantity, p.min_stock_threshold);
+      // Pass the transaction client so restock queue changes are atomic
+      await productService.updateRestockQueue(p.id, p.stock_quantity, p.min_stock_threshold, client);
     }
 
     await client.query("COMMIT");
@@ -97,13 +105,46 @@ async function listOrders({ status, date, page = 1, limit = 10 } = {}) {
   return { data: rows, total: Number(countRows[0].total), page, limit, totalPages: Math.ceil(Number(countRows[0].total) / limit) };
 }
 
-async function updateOrderStatus(id, status) {
+// Valid next status transitions for managers (must follow this flow strictly)
+const MANAGER_NEXT = { Pending: "Confirmed", Confirmed: "Shipped", Shipped: "Delivered" };
+
+async function updateOrderStatus(id, status, userRole = "admin") {
   if (!ORDER_STATUS.includes(status)) throw new ApiError(400, "Invalid order status");
+
+  // Fetch current order
+  const current = await db.query("SELECT id, status FROM orders WHERE id = $1", [id]);
+  if (!current.rows.length) throw new ApiError(404, "Order not found");
+  const currentStatus = current.rows[0].status;
+
+  // Already at terminal state
+  if (["Delivered", "Cancelled"].includes(currentStatus)) {
+    throw new ApiError(400, `Order is already ${currentStatus} and cannot be updated`);
+  }
+
+  if (userRole === "manager") {
+    if (status === "Cancelled") {
+      // Managers can only cancel before shipping
+      if (["Shipped", "Delivered"].includes(currentStatus)) {
+        throw new ApiError(403, "Managers cannot cancel an order that has already been shipped");
+      }
+    } else {
+      // Must follow strict flow: Pending → Confirmed → Shipped → Delivered
+      const allowed = MANAGER_NEXT[currentStatus];
+      if (status !== allowed) {
+        throw new ApiError(
+          403,
+          allowed
+            ? `Order status can only be moved to "${allowed}" from "${currentStatus}"`
+            : `Order in "${currentStatus}" status cannot be advanced further`
+        );
+      }
+    }
+  }
+
   const { rows } = await db.query(
     "UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
     [status, id]
   );
-  if (!rows.length) throw new ApiError(404, "Order not found");
   return rows[0];
 }
 

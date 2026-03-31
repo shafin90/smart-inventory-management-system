@@ -1,19 +1,30 @@
 import { useState } from "react";
+import { observer } from "mobx-react-lite";
 import { useOrders } from "../hook/useOrders";
+import rootStore from "../../../stores/rootStore";
 
 const ORDER_STATUSES = ["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"];
+
+// Valid next status for managers (strict sequential flow)
+const MANAGER_NEXT = {
+  Pending:   "Confirmed",
+  Confirmed: "Shipped",
+  Shipped:   "Delivered",
+};
 
 const statusBadge = (s) => {
   const map = { Pending: "badge-gray", Confirmed: "badge-blue", Shipped: "badge-amber", Delivered: "badge-green", Cancelled: "badge-red" };
   return <span className={`badge ${map[s] || "badge-gray"}`}>{s}</span>;
 };
 
-export default function OrdersPanel({ active }) {
+function OrdersPanel({ active }) {
   const { orders, products, total, page, totalPages, changePage, error, filters, applyFilters, createOrder, updateStatus } = useOrders(active);
-  const [showForm, setShowForm] = useState(false);
+  const isAdmin = rootStore.isAdmin;
+  const [showForm, setShowForm]     = useState(false);
   const [customerName, setCustomerName] = useState("");
-  const [items, setItems] = useState([{ productId: 0, quantity: 1 }]);
+  const [items, setItems]           = useState([{ productId: 0, quantity: 1 }]);
   const [localError, setLocalError] = useState("");
+
   if (!active) return null;
 
   const updateItem = (i, key, val) => setItems((prev) => prev.map((item, idx) => idx === i ? { ...item, [key]: val } : item));
@@ -31,6 +42,42 @@ export default function OrdersPanel({ active }) {
     setCustomerName("");
     setItems([{ productId: 0, quantity: 1 }]);
     setShowForm(false);
+  };
+
+  /** Build the action buttons for a row according to the user's role */
+  const renderActions = (o) => {
+    if (["Delivered", "Cancelled"].includes(o.status)) return null;
+
+    if (isAdmin) {
+      return (
+        <>
+          {o.status === "Pending"   && <button className="btn btn-primary btn-sm"  onClick={() => updateStatus(o.id, "Confirmed")}>Confirm</button>}
+          {o.status === "Confirmed" && <button className="btn btn-warning btn-sm"  onClick={() => updateStatus(o.id, "Shipped")}>Ship</button>}
+          {o.status === "Shipped"   && <button className="btn btn-success btn-sm"  onClick={() => updateStatus(o.id, "Delivered")}>Deliver</button>}
+          <button className="btn btn-danger btn-sm" onClick={() => updateStatus(o.id, "Cancelled")}>Cancel</button>
+        </>
+      );
+    }
+
+    // Manager: strict sequential flow, cancel only before Shipped
+    const nextStatus = MANAGER_NEXT[o.status];
+    return (
+      <>
+        {nextStatus && (
+          <button
+            className={`btn btn-sm ${nextStatus === "Confirmed" ? "btn-primary" : nextStatus === "Shipped" ? "btn-warning" : "btn-success"}`}
+            onClick={() => updateStatus(o.id, nextStatus)}
+          >
+            → {nextStatus}
+          </button>
+        )}
+        {!["Shipped", "Delivered"].includes(o.status) && (
+          <button className="btn btn-danger btn-sm" onClick={() => updateStatus(o.id, "Cancelled")}>
+            Cancel
+          </button>
+        )}
+      </>
+    );
   };
 
   return (
@@ -106,6 +153,13 @@ export default function OrdersPanel({ active }) {
         </div>
       )}
 
+      {/* Role permission info for managers */}
+      {!isAdmin && (
+        <div style={{ fontSize: 11, color: "var(--gray-400)", padding: "4px 0 8px" }}>
+          ℹ Managers follow the order flow: Pending → Confirmed → Shipped → Delivered. Cancellation is only allowed before shipping.
+        </div>
+      )}
+
       {/* Orders Table */}
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         <div className="table-wrap" style={{ margin: 0, border: "none", borderRadius: 0 }}>
@@ -130,12 +184,7 @@ export default function OrdersPanel({ active }) {
                   <td style={{ fontSize: 12, color: "var(--gray-500)" }}>{new Date(o.created_at).toLocaleDateString()}</td>
                   <td>
                     <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                      {o.status === "Pending"   && <button className="btn btn-primary btn-sm"  onClick={() => updateStatus(o.id, "Confirmed")}>Confirm</button>}
-                      {o.status === "Confirmed" && <button className="btn btn-warning btn-sm"  onClick={() => updateStatus(o.id, "Shipped")}>Ship</button>}
-                      {o.status === "Shipped"   && <button className="btn btn-success btn-sm"  onClick={() => updateStatus(o.id, "Delivered")}>Deliver</button>}
-                      {!["Delivered","Cancelled"].includes(o.status) && (
-                        <button className="btn btn-danger btn-sm" onClick={() => updateStatus(o.id, "Cancelled")}>Cancel</button>
-                      )}
+                      {renderActions(o)}
                     </div>
                   </td>
                 </tr>
@@ -157,3 +206,5 @@ export default function OrdersPanel({ active }) {
     </>
   );
 }
+
+export default observer(OrdersPanel);

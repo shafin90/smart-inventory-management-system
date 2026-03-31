@@ -8,15 +8,27 @@ services:
     env_file:
       - ./backend/.env.docker
     depends_on:
-      - postgres
-      - redis
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - /app/node_modules
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
+      NODE_ENV: development
+    mem_limit: 512m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   postgres:
     image: postgres:16
@@ -31,6 +43,13 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/sql:/docker-entrypoint-initdb.d
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d inventory_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
@@ -38,6 +57,13 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -46,6 +72,13 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
 volumes:
   postgres_data:

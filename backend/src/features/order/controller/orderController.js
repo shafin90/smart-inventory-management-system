@@ -47,7 +47,7 @@ async function getOne(req, res, next) {
 async function updateStatus(req, res, next) {
   try {
     const payload = statusSchema.parse(req.body);
-    const order = await service.updateOrderStatus(Number(req.params.id), payload.status);
+    const order = await service.updateOrderStatus(Number(req.params.id), payload.status, req.user.role);
     await logActivity(`Order #${order.id} marked as ${payload.status}`, req.user.id);
     await invalidateDashboardCache();
     res.json(order);

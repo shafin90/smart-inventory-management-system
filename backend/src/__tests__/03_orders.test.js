@@ -22,13 +22,14 @@ function mockOrderTransaction(products, order) {
   };
   db.getClient.mockResolvedValue(client);
   client.query
-    .mockResolvedValueOnce(undefined) // BEGIN
-    .mockResolvedValueOnce({ rows: products }) // SELECT products
-    .mockResolvedValueOnce({ rows: [order] }) // INSERT order
-    .mockResolvedValueOnce(undefined) // INSERT order_item 1
+    .mockResolvedValueOnce(undefined)                  // BEGIN
+    .mockResolvedValueOnce({ rows: products })         // SELECT ... FOR UPDATE
+    .mockResolvedValueOnce({ rows: [order] })          // INSERT order
+    .mockResolvedValueOnce(undefined)                  // INSERT order_item
     .mockResolvedValueOnce({ rows: [{ id: products[0].id, stock_quantity: 8, min_stock_threshold: 5 }] }) // UPDATE stock
-    .mockResolvedValueOnce(undefined); // COMMIT
-  // updateRestockQueue uses db.query (not client.query); stock=8 >= threshold=5 → default mock deletes
+    // updateRestockQueue now runs via client (inside TX); stock=8 >= threshold=5 → DELETE
+    .mockResolvedValueOnce(undefined)                  // DELETE FROM restock_queue (via client)
+    .mockResolvedValueOnce(undefined);                 // COMMIT
   return client;
 }
 

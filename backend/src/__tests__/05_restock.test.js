@@ -83,12 +83,19 @@ describe("Feature 5: Restock Queue", () => {
 
   describe("PATCH /api/products/:id/restock", () => {
     it("restocks a product and removes from restock queue", async () => {
-      db.query
+      // restockProduct now uses a transaction for atomicity
+      const client = { query: jest.fn(), release: jest.fn() };
+      db.getClient.mockResolvedValue(client);
+
+      client.query
+        .mockResolvedValueOnce(undefined) // BEGIN
         .mockResolvedValueOnce({
           rows: [{ id: 1, name: "iPhone", stock_quantity: 15, min_stock_threshold: 5, status: "Active" }],
-        }) // UPDATE products SET stock_quantity
-        .mockResolvedValueOnce(undefined); // DELETE FROM restock_queue (inside restockProduct)
-      // updateRestockQueue → stock=15 >= threshold=5 → DELETE (handled by default mock)
+        })                                // UPDATE products
+        .mockResolvedValueOnce(undefined) // DELETE FROM restock_queue (inside transaction)
+        .mockResolvedValueOnce(undefined); // COMMIT
+
+      // After commit, updateRestockQueue(15, 5) → stock >= threshold → DELETE via db.query (default mock)
 
       const res = await request(app)
         .patch("/api/products/1/restock")

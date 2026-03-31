@@ -53,12 +53,13 @@ describe("Feature 8: Activity Log", () => {
         .mockResolvedValueOnce(undefined) // BEGIN
         .mockResolvedValueOnce({
           rows: [{ id: 1, name: "Phone", price: "100", status: "Active", stock_quantity: 5, min_stock_threshold: 2 }],
-        })
+        })                                // SELECT FOR UPDATE
         .mockResolvedValueOnce({ rows: [{ id: 55, customer_name: "Heidi", total_price: "100", status: "Pending" }] })
-        .mockResolvedValueOnce(undefined) // order_item insert
+        .mockResolvedValueOnce(undefined) // INSERT order_item
         .mockResolvedValueOnce({ rows: [{ id: 1, stock_quantity: 4, min_stock_threshold: 2 }] }) // stock updated
+        // updateRestockQueue now via client: stock=4 >= threshold=2 → DELETE
+        .mockResolvedValueOnce(undefined) // DELETE FROM restock_queue (via client)
         .mockResolvedValueOnce(undefined); // COMMIT
-      // updateRestockQueue → stock=4 >= threshold=2 → DELETE (default mock returns { rows: [] })
 
       await request(app)
         .post("/api/orders")
